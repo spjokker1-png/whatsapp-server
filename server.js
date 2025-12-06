@@ -13,7 +13,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 
 // Read API key from environment for simple auth between PHP proxy and Node
-const API_KEY = process.env.API_KEY || null;
+const API_KEY = process.env.API_KEY || 'aFmMZeEzwdvtUbljVXNs3Co49TJBfL2OWPnYkGqR';
 
 // Simple middleware to protect API routes when API_KEY is set
 if (API_KEY) {
