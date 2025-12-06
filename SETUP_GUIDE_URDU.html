@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WhatsApp Integration - Installation Guide</title>
+    <style>
+        body { font-family: Arial; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
+        h1 { color: #25D366; border-bottom: 3px solid #25D366; padding-bottom: 10px; }
+        h2 { color: #1FAC63; margin-top: 30px; }
+        .step { background: #f9f9f9; padding: 15px; margin: 15px 0; border-left: 4px solid #25D366; border-radius: 5px; }
+        .code { background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 5px; overflow-x: auto; margin: 10px 0; font-family: monospace; }
+        .success { color: #28a745; background: #d4edda; padding: 10px; border-radius: 5px; margin: 10px 0; }
+        .warning { color: #856404; background: #fff3cd; padding: 10px; border-radius: 5px; margin: 10px 0; }
+        .error { color: #721c24; background: #f8d7da; padding: 10px; border-radius: 5px; margin: 10px 0; }
+        ul { line-height: 1.8; }
+        strong { color: #1FAC63; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🔗 WhatsApp Integration - مکمل سیٹ اپ گائیڈ</h1>
+
+    <h2>مرحلہ 1: Node.js انسٹال کریں</h2>
+    <div class="step">
+        <p>اگر Node.js انسٹال نہیں ہے تو <strong>nodejs.org</strong> سے ڈاؤن لوڈ کریں</p>
+        <p>انسٹال کریں اور verify کریں:</p>
+        <div class="code">
+node --version
+npm --version
+        </div>
+    </div>
+
+    <h2>مرحلہ 2: WhatsApp Server شروع کریں</h2>
+    <div class="step">
+        <p>PowerShell میں یہ commands چلائیں:</p>
+        <div class="code">
+cd c:\xampp\htdocs\whatsapp-server
+npm install
+npm start
+        </div>
+        <div class="success">
+            ✅ اگر server successfully شروع ہو گیا تو یہ message دیکھیں:<br>
+            🚀 WhatsApp Server running on port 3001
+        </div>
+    </div>
+
+    <h2>مرحلہ 3: Database Tables بنائیں</h2>
+    <div class="step">
+        <p>phpMyAdmin کھولیں اور یہ SQL queries چلائیں:</p>
+        <div class="code">
+CREATE TABLE IF NOT EXISTS `whatsapp_config` (
+    `id` INT PRIMARY KEY AUTO_INCREMENT,
+    `whatsapp_enabled` BOOLEAN DEFAULT 1,
+    `node_server_url` VARCHAR(255) NOT NULL DEFAULT 'http://localhost:3001',
+    `message_on_register` BOOLEAN DEFAULT 1,
+    `message_on_order` BOOLEAN DEFAULT 1,
+    `register_message_template` LONGTEXT,
+    `order_message_template` LONGTEXT,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS `whatsapp_message_logs` (
+    `id` INT PRIMARY KEY AUTO_INCREMENT,
+    `phone` VARCHAR(20),
+    `message_type` VARCHAR(50),
+    `message_content` LONGTEXT,
+    `user_id` INT,
+    `order_id` INT,
+    `status` VARCHAR(20) DEFAULT 'sent',
+    `sent_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO whatsapp_config (register_message_template, order_message_template) 
+VALUES (
+    'سلام {{name}}! 👋\n\nآپ نے ہماری سروس میں شامل ہو گئے ہیں۔\nاپنا اکاؤنٹ اب استعمال کریں۔\n\nشکریہ!',
+    'سلام {{name}}! 🎉\n\nآپ کا آرڈر #{{order_id}} مکمل ہو گیا۔\nسروس: {{service}}\nقیمت: {{price}}\n\nمزید مدد کے لیے رابطہ کریں۔'
+);
+        </div>
+    </div>
+
+    <h2>مرحلہ 4: Admin Panel میں Menu Add کریں</h2>
+    <div class="step">
+        <p><strong>admin/views/header.php</strong> میں یہ line add کریں:</p>
+        <div class="code">
+&lt;li class="&lt;?php if (route(1) == 'whatsapp') : echo 'active' ; endif; ?&gt;"&gt;
+    &lt;a class="ajax-link" href="&lt;?php echo site_url('admin/whatsapp') ?&gt;"&gt;
+        &lt;i class="bi bi-chat-dots" style="color: #25D366;"&gt;&lt;/i&gt;
+        &lt;span&gt; WhatsApp&lt;/span&gt;
+    &lt;/a&gt;
+&lt;/li&gt;
+        </div>
+        <p>یہ menu item <strong>Additionals</strong> میں add کریں</p>
+    </div>
+
+    <h2>مرحلہ 5: Routing شامل کریں</h2>
+    <div class="step">
+        <p><strong>admin/index.php</strong> میں routing section میں یہ add کریں:</p>
+        <div class="code">
+// WhatsApp Routes
+if (route(1) === 'whatsapp') {
+    if (!route(2)) {
+        include __DIR__ . '/views/whatsapp.php';
+    } else {
+        $_GET['action'] = 'whatsapp-' . route(2);
+        include __DIR__ . '/controller/whatsapp-ajax.php';
+    }
+}
+        </div>
+    </div>
+
+    <h2>مرحلہ 6: Auto Messages شامل کریں</h2>
+    <div class="step">
+        <p><strong>User Registration کے بعد:</strong></p>
+        <p>جہاں user register ہوتا ہے (شاید <strong>admin/controller/clients.php</strong> یا similar میں):</p>
+        <div class="code">
+// User registration کے بعد
+require_once __DIR__ . '/../../whatsapp-server/whatsapp-hooks.php';
+
+$userPhone = $_POST['phone'] ?? null; // استعمال کنندہ کے phone
+if ($userPhone) {
+    sendWhatsAppRegisterMessage(
+        $newUserId,
+        $userName,
+        $userPhone,
+        $userEmail
+    );
+}
+        </div>
+        <p><strong>Order Place کے بعد:</strong></p>
+        <div class="code">
+// Order place کے بعد
+require_once __DIR__ . '/../../whatsapp-server/whatsapp-hooks.php';
+
+sendWhatsAppOrderMessage(
+    $orderId,
+    $userId,
+    $userName,
+    $userPhone,
+    $serviceName,
+    $quantity,
+    $price
+);
+        </div>
+    </div>
+
+    <h2>مرحلہ 7: QR Code سے WhatsApp جوڑیں</h2>
+    <div class="step">
+        <p>1. Admin Panel میں <strong>WhatsApp</strong> menu پر جائیں</p>
+        <p>2. QR Code کو دیکھیں</p>
+        <p>3. اپنے فون میں WhatsApp کھولیں → Settings → Linked Devices → Link a Device</p>
+        <p>4. QR Code کو scan کریں</p>
+        <div class="success">
+            ✅ جب connection ہو جائے تو status "Connected" دکھے گی
+        </div>
+    </div>
+
+    <h2>مرحلہ 8: Test کریں</h2>
+    <div class="step">
+        <p>Admin Panel میں:</p>
+        <ol>
+            <li>WhatsApp section میں جائیں</li>
+            <li>"Send Test Message" میں phone number ڈالیں</li>
+            <li>Send button دبائیں</li>
+            <li>اپنے WhatsApp پر message آئے گا</li>
+        </ol>
+        <div class="success">
+            ✅ اگر message آ گیا تو سب کچھ صحیح ہے!
+        </div>
+    </div>
+
+    <h2>مرحلہ 9: Settings Configure کریں</h2>
+    <div class="step">
+        <p>Admin Panel میں:</p>
+        <ol>
+            <li>Toggle enable کریں "Send on User Register"</li>
+            <li>Toggle enable کریں "Send on Order Place"</li>
+            <li>Message templates customise کریں</li>
+            <li>"Save Settings" دبائیں</li>
+        </ol>
+    </div>
+
+    <h2>🔧 Troubleshooting</h2>
+    <div class="warning">
+        <strong>مسئلہ:</strong> WhatsApp server نہیں جڑ رہا<br>
+        <strong>حل:</strong> یقینی بنائیں کہ Node.js server چل رہا ہے اور port 3001 open ہے
+    </div>
+    <div class="warning">
+        <strong>مسئلہ:</strong> QR Code نہیں آ رہا<br>
+        <strong>حل:</strong> Server logs چیک کریں, شاید WhatsApp کو پہلے سے authorize کی ضرورت ہے
+    </div>
+    <div class="warning">
+        <strong>مسئلہ:</strong> Messages نہیں بھیج رہے<br>
+        <strong>حل:</strong> WhatsApp connection status check کریں, database میں config ہے یا نہیں
+    </div>
+
+    <h2>📱 Variables Reference</h2>
+    <div class="step">
+        <p><strong>Registration Message میں:</strong></p>
+        <ul>
+            <li>{{name}} - User کا نام</li>
+            <li>{{username}} - Username</li>
+            <li>{{email}} - Email address</li>
+            <li>{{registration_date}} - Registration کی تاریخ</li>
+        </ul>
+        <p><strong>Order Message میں:</strong></p>
+        <ul>
+            <li>{{name}} - User کا نام</li>
+            <li>{{service}} - Service کا نام</li>
+            <li>{{quantity}} - مقدار</li>
+            <li>{{price}} - قیمت</li>
+            <li>{{order_id}} - Order ID</li>
+        </ul>
+    </div>
+
+    <h2>🎯 بہترین طریقے</h2>
+    <div class="step">
+        <ul>
+            <li>ہمیشہ test کریں پہلے production میں استعمال کرنے سے</li>
+            <li>Message templates کو اردو میں لکھیں تاکہ بہتر response ملے</li>
+            <li>Phone numbers کو صحیح format میں رکھیں (92XXXXXXXXXX)</li>
+            <li>Server logs regular چیک کریں errors کے لیے</li>
+            <li>WhatsApp connected رہتا ہے تاکہ messages بھیج سکیں</li>
+        </ul>
+    </div>
+
+    <h2>✅ اب مکمل ہو گیا!</h2>
+    <div class="success">
+        آپ کا WhatsApp integration مکمل طور پر سیٹ ہو گیا ہے!
+        اب جب کوئی user register کرے یا order place کرے تو وہ WhatsApp پر message پائیں گے۔
+    </div>
+
+</div>
+</body>
+</html>

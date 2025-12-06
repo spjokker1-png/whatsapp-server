@@ -1,0 +1,8 @@
+node_modules/
+vendor/
+tmp_sessions/
+logs/
+*.log
+.env
+.wwebjs_auth/
+.DS_Store

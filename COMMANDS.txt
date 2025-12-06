@@ -1,0 +1,214 @@
+═══════════════════════════════════════════════════════════════════════════════
+                    Quick Command Reference
+═══════════════════════════════════════════════════════════════════════════════
+
+📟 SERVER COMMANDS (PowerShell میں):
+
+┌─ START SERVER:
+│  cd c:\xampp\htdocs\whatsapp-server
+│  npm start
+│
+│  Output: ✅ Server running on http://localhost:3001
+│
+├─ STOP SERVER:
+│  Ctrl + C (PowerShell میں)
+│
+├─ CHECK SERVER STATUS:
+│  curl http://localhost:3001/health
+│
+├─ INSTALL DEPENDENCIES:
+│  npm install
+│
+└─ VIEW LOGS:
+   npm start (already shows logs)
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+🗄️ DATABASE COMMANDS (phpMyAdmin یا MySQL Command Line):
+
+┌─ CREATE TABLES:
+│  Copy تمام SQL queries NEXT_STEPS.txt سے
+│
+├─ CHECK CONFIG:
+│  SELECT * FROM whatsapp_config;
+│
+├─ VIEW MESSAGE LOGS:
+│  SELECT * FROM whatsapp_message_logs ORDER BY sent_at DESC;
+│
+├─ DELETE OLD LOGS:
+│  DELETE FROM whatsapp_message_logs WHERE sent_at < DATE_SUB(NOW(), INTERVAL 30 DAY);
+│
+└─ UPDATE TEMPLATES:
+   UPDATE whatsapp_config 
+   SET register_message_template = 'Your message here' 
+   WHERE id = 1;
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+🌐 API COMMANDS (PowerShell میں - test کے لیے):
+
+┌─ CHECK CONNECTION:
+│  curl http://localhost:3001/api/status | ConvertFrom-Json
+│
+│  Returns: { "connected": false, "hasQR": true }
+│
+├─ GET QR CODE (Base64):
+│  curl http://localhost:3001/api/qr-code | ConvertFrom-Json
+│
+│  Returns: { "qr": "data:image/png;base64,..." }
+│
+├─ SEND TEST MESSAGE:
+│  $body = @{
+│      phone = "923365823432"
+│      message = "Test message"
+│  } | ConvertTo-Json
+│  
+│  curl -X POST http://localhost:3001/api/send-message `
+│    -Headers @{"Content-Type"="application/json"} `
+│    -Body $body | ConvertFrom-Json
+│
+├─ GET MESSAGE LOGS:
+│  curl http://localhost:3001/api/message-logs | ConvertFrom-Json
+│
+│  Returns: { "messages": [...] }
+│
+└─ DISCONNECT:
+   curl -X POST http://localhost:3001/api/disconnect | ConvertFrom-Json
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+📂 FILE MODIFICATION COMMANDS:
+
+┌─ EDIT header.php (Notepad++):
+│  "C:\Program Files\Notepad++\notepad++.exe" c:\xampp\htdocs\admin\views\header.php
+│
+├─ EDIT index.php:
+│  "C:\Program Files\Notepad++\notepad++.exe" c:\xampp\htdocs\admin\index.php
+│
+├─ EDIT clients.php (registration):
+│  "C:\Program Files\Notepad++\notepad++.exe" c:\xampp\htdocs\admin\controller\clients.php
+│
+└─ EDIT orders.php:
+   "C:\Program Files\Notepad++\notepad++.exe" c:\xampp\htdocs\admin\controller\orders.php
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+🔍 TROUBLESHOOTING COMMANDS:
+
+┌─ CHECK PORT 3001 IS OPEN:
+│  netstat -ano | findstr :3001
+│
+│  اگر result نہ دیکھے تو server نہیں چل رہا
+│
+├─ CHECK NODE.JS VERSION:
+│  node --version
+│  npm --version
+│
+├─ CLEAR NODE CACHE:
+│  npm cache clean --force
+│
+├─ REINSTALL DEPENDENCIES:
+│  rm -r node_modules
+│  rm package-lock.json
+│  npm install
+│
+├─ VIEW SERVER ERROR LOGS:
+│  Get-Content C:\Users\[YourUsername]\AppData\Local\npm-cache\_logs\*
+│
+└─ RESTART EVERYTHING:
+   1. Stop server (Ctrl+C)
+   2. npm start
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+✅ VERIFICATION CHECKLIST:
+
+□ Node.js installed?
+  node --version
+
+□ npm installed?
+  npm --version
+
+□ Server running?
+  curl http://localhost:3001/health
+
+□ Database tables created?
+  (Check in phpMyAdmin)
+
+□ Admin menu added?
+  (Check admin panel)
+
+□ Routing added?
+  (Check admin/index.php)
+
+□ Hooks added?
+  (Check clients.php & orders.php)
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+💾 BACKUP COMMANDS:
+
+┌─ BACKUP WHATSAPP CONFIG:
+│  Select * from whatsapp_config > config_backup.sql
+│
+├─ BACKUP MESSAGE LOGS:
+│  Select * from whatsapp_message_logs > logs_backup.sql
+│
+└─ BACKUP ENTIRE SERVER:
+   Copy-Item "c:\xampp\htdocs\whatsapp-server" -Destination "c:\backup\" -Recurse
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+🚀 PRODUCTION SETUP:
+
+پروڈکشن میں جانے سے پہلے:
+
+1. .env file میں NODE_ENV=production رکھیں
+2. PORT 3001 کو firewall میں allow کریں
+3. SSL certificate لگائیں (اگر HTTPS چاہیے)
+4. Server restart script بنائیں:
+
+   ┌─ restart.ps1:
+   │  Stop-Process -Name node -Force -ErrorAction SilentlyContinue
+   │  Start-Sleep -Seconds 2
+   │  cd c:\xampp\htdocs\whatsapp-server
+   │  Start-Process powershell -ArgumentList "-Command npm start" -WindowStyle Hidden
+   └─ File save کریں
+
+5. Task Scheduler میں schedule کریں (optional)
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+📞 HELP COMMANDS:
+
+npm --help              : npm کی help
+node --help             : Node.js کی help
+curl --help             : curl کی help
+netstat --help          : netstat کی help
+powershell --help       : PowerShell کی help
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+🔐 SECURITY NOTES:
+
+⚠️ .env file میں sensitive info ڈالیں (server.js میں نہیں)
+⚠️ Database credentials محفوظ رکھیں
+⚠️ Phone numbers validate کریں sending سے پہلے
+⚠️ Rate limiting لگائیں bulk messages پر
+⚠️ Log files regularly clear کریں
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+تمام commands یہاں تھے۔ اگر کوئی سوال ہو تو پوچھیں! 🚀
+
+═══════════════════════════════════════════════════════════════════════════════
