@@ -107,6 +107,11 @@ function initWhatsApp() {
             }
         });
 
+        // Loading Event
+        client.on('loading_screen', (percent, message) => {
+            log(`Loading: ${percent}% - ${message}`, 'info');
+        });
+
         // QR Code Event
         client.on('qr', async (qr) => {
             try {
@@ -208,11 +213,22 @@ function initWhatsApp() {
 
         // Initialize client
         log('Initializing client...', 'info');
-        client.initialize().catch(err => {
-            log('Initialize error: ' + err.message, 'error');
-        }).finally(() => {
-            initializing = false;
-        });
+        client.initialize()
+            .then(() => {
+                log('Client initialization completed', 'success');
+            })
+            .catch(err => {
+                log('Initialize error: ' + err.message, 'error');
+                log('Error stack: ' + err.stack, 'error');
+                // Retry after delay
+                setTimeout(() => {
+                    log('Retrying initialization...', 'warn');
+                    initWhatsApp();
+                }, 10000);
+            })
+            .finally(() => {
+                initializing = false;
+            });
 
     } catch (err) {
         log('Init Error: ' + err.message, 'error');
