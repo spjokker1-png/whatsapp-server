@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "postinstall": "cd node_modules/whatsapp-web.js && npm install puppeteer --force || true"
   },
   "dependencies": {
     "whatsapp-web.js": "^1.25.7",
@@ -15,6 +16,7 @@
     "cors": "^2.8.5",
     "qrcode": "^1.5.3",
     "axios": "^1.6.0",
-    "pino": "^8.16.0"
+    "pino": "^8.16.0",
+    "puppeteer": "^22.0.0"
   }
 }
