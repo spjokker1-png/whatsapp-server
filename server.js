@@ -96,9 +96,15 @@ function initWhatsApp() {
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
                     '--disable-dev-shm-usage',
+                    '--disable-accelerated-2d-canvas',
+                    '--no-first-run',
+                    '--no-zygote',
                     '--disable-gpu',
-                    '--single-process'
-                ]
+                    '--disable-software-rasterizer',
+                    '--disable-extensions'
+                ],
+                executablePath: process.env.CHROME_BIN || '/usr/bin/chromium-browser',
+                timeout: 60000
             }
         });
 
