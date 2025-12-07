@@ -15,17 +15,6 @@ const app = express();
 // Read API key from environment for simple auth between PHP proxy and Node
 const API_KEY = process.env.API_KEY || 'aFmMZeEzwdvtUbljVXNs3Co49TJBfL2OWPnYkGqR';
 
-// Simple middleware to protect API routes when API_KEY is set
-if (API_KEY) {
-    app.use((req, res, next) => {
-        const key = req.headers['x-api-key'] || req.query['api_key'] || req.headers['x-api-key'.toLowerCase()];
-        if (!key || String(key) !== String(API_KEY)) {
-            res.status(401).json({ error: 'Unauthorized' });
-            return;
-        }
-        next();
-    });
-}
 const PORT = process.env.PORT || 3001;
 let client = null;
 let isConnected = false;
@@ -229,8 +218,25 @@ function initWhatsApp() {
 
 // API Routes
 
-// 1. Status Check
-app.get('/api/status', (req, res) => {
+// Health check (public, no auth needed)
+app.get('/health', (req, res) => {
+    res.json({ status: 'ok', connected: isConnected });
+});
+
+// API Key Middleware for protected routes
+const requireApiKey = (req, res, next) => {
+    if (API_KEY) {
+        const key = req.headers['x-api-key'] || req.query['api_key'];
+        if (!key || String(key) !== String(API_KEY)) {
+            res.status(401).json({ error: 'Unauthorized' });
+            return;
+        }
+    }
+    next();
+};
+
+// 1. Status Check (protected)
+app.get('/api/status', requireApiKey, (req, res) => {
     log('Status request received', 'info');
     try {
         const response = {
@@ -247,8 +253,8 @@ app.get('/api/status', (req, res) => {
     }
 });
 
-// 2. Get QR Code
-app.get('/api/qr-code', (req, res) => {
+// 2. Get QR Code (protected)
+app.get('/api/qr-code', requireApiKey, (req, res) => {
     if (!currentQRCode) {
         return res.json({
             qr: null,
@@ -258,8 +264,8 @@ app.get('/api/qr-code', (req, res) => {
     res.json({ qr: currentQRCode });
 });
 
-// 3. Send Message
-app.post('/api/send-message', async (req, res) => {
+// 3. Send Message (protected)
+app.post('/api/send-message', requireApiKey, async (req, res) => {
     const { phone, message } = req.body;
 
     if (!phone || !message) {
@@ -296,8 +302,8 @@ app.post('/api/send-message', async (req, res) => {
     }
 });
 
-// 4. Send Bulk Messages
-app.post('/api/send-bulk', async (req, res) => {
+// 4. Send Bulk Messages (protected)
+app.post('/api/send-bulk', requireApiKey, async (req, res) => {
     const { messages: msgList } = req.body;
 
     if (!Array.isArray(msgList) || msgList.length === 0) {
@@ -341,14 +347,14 @@ app.post('/api/send-bulk', async (req, res) => {
     res.json({ success: true, results });
 });
 
-// 5. Get Message Logs
-app.get('/api/message-logs', (req, res) => {
+// 5. Get Message Logs (protected)
+app.get('/api/message-logs', requireApiKey, (req, res) => {
     const messages = getMessages();
     res.json({ messages });
 });
 
-// 6. Disconnect WhatsApp
-app.post('/api/disconnect', async (req, res) => {
+// 6. Disconnect WhatsApp (protected)
+app.post('/api/disconnect', requireApiKey, async (req, res) => {
     try {
         if (client) {
             await client.destroy();
@@ -359,11 +365,6 @@ app.post('/api/disconnect', async (req, res) => {
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
-});
-
-// Health check
-app.get('/health', (req, res) => {
-    res.json({ status: 'ok', connected: isConnected });
 });
 
 // 404 Handler
