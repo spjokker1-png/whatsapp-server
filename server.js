@@ -422,16 +422,32 @@ function startConnectionMonitor() {
                     reconnectAttempts++;
                     log(`Reconnect attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}`, 'info');
                     
-                    if (client && typeof client.initialize === 'function') {
+                    // If no client exists, initialize from scratch
+                    if (!client) {
+                        log('No client instance found, calling initWhatsApp()', 'info');
+                        initWhatsApp();
+                    } else if (typeof client.initialize === 'function') {
+                        // Client exists but disconnected, try to reinitialize
                         client.initialize().catch(err => {
                             log('Monitor reconnect failed: ' + err.message, 'error');
+                            // If reinit fails, create new client
+                            setTimeout(() => {
+                                log('Reinit failed, creating new client instance', 'warn');
+                                client = null;
+                                initWhatsApp();
+                            }, 5000);
                         });
                     } else {
+                        // Client in bad state, recreate
+                        log('Client in bad state, recreating...', 'warn');
+                        client = null;
                         initWhatsApp();
                     }
                 } else {
-                    log('Max reconnect attempts reached, resetting counter', 'warn');
+                    log('Max reconnect attempts reached, resetting counter and trying full init', 'warn');
                     reconnectAttempts = 0;
+                    client = null;
+                    initWhatsApp();
                 }
             } else {
                 // Connected, reset attempt counter
