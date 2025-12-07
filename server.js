@@ -103,7 +103,6 @@ function initWhatsApp() {
                     '--disable-software-rasterizer',
                     '--disable-extensions'
                 ],
-                executablePath: process.env.CHROME_BIN || '/usr/bin/chromium-browser',
                 timeout: 60000
             }
         });
