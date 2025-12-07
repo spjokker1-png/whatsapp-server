@@ -390,6 +390,9 @@ initWhatsApp();
 const server = app.listen(PORT, () => {
     log(`Server running on http://localhost:${PORT}`, 'success');
     log('Waiting for WhatsApp connection...', 'info');
+    
+    // Start connection monitor
+    startConnectionMonitor();
 });
 
 // Handle uncaught exceptions globally
@@ -398,6 +401,64 @@ process.on('uncaughtException', (err) => {
     log(err.stack, 'error');
     // Don't exit, try to keep running
 });
+
+// Persistent connection monitor - check every 30 seconds
+let connectionCheckInterval = null;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 10;
+
+function startConnectionMonitor() {
+    if (connectionCheckInterval) {
+        clearInterval(connectionCheckInterval);
+    }
+    
+    connectionCheckInterval = setInterval(async () => {
+        try {
+            // Check if client exists and is properly connected
+            if (!client || !isConnected) {
+                log('Connection monitor: Client not connected, attempting reconnect...', 'warn');
+                
+                if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+                    reconnectAttempts++;
+                    log(`Reconnect attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}`, 'info');
+                    
+                    if (client && typeof client.initialize === 'function') {
+                        client.initialize().catch(err => {
+                            log('Monitor reconnect failed: ' + err.message, 'error');
+                        });
+                    } else {
+                        initWhatsApp();
+                    }
+                } else {
+                    log('Max reconnect attempts reached, resetting counter', 'warn');
+                    reconnectAttempts = 0;
+                }
+            } else {
+                // Connected, reset attempt counter
+                if (reconnectAttempts > 0) {
+                    log('Connection restored, resetting reconnect attempts', 'success');
+                    reconnectAttempts = 0;
+                }
+                
+                // Verify client state
+                try {
+                    const state = await client.getState();
+                    if (state !== 'CONNECTED') {
+                        log(`Client state is ${state}, should be CONNECTED`, 'warn');
+                        isConnected = false;
+                    }
+                } catch (err) {
+                    log('Error checking client state: ' + err.message, 'error');
+                    isConnected = false;
+                }
+            }
+        } catch (err) {
+            log('Connection monitor error: ' + err.message, 'error');
+        }
+    }, 30000); // Check every 30 seconds
+    
+    log('Connection monitor started', 'success');
+}
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
