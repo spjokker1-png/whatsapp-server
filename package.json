@@ -2,10 +2,10 @@
   "name": "whatsapp-server",
   "version": "1.0.0",
   "description": "WhatsApp Web Integration Server",
-  "main": "server.js",
+  "main": "server-cpanel.js",
   "type": "module",
   "scripts": {
-    "start": "node server.js",
+    "start": "node server-cpanel.js",
     "dev": "node server.js",
     "postinstall": "cd node_modules/whatsapp-web.js && npm install puppeteer --force || true"
   },

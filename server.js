@@ -70,18 +70,77 @@ client.on('disconnected', (reason) => {
     connected = false;
     qrCode = null;
     
-    // Auto-reconnect after 5 seconds
-    console.log('Attempting to reconnect in 5 seconds...');
-    setTimeout(() => {
-        console.log('Reinitializing WhatsApp client...');
+    // Auto-reconnect after 5 seconds with retry logic
+    let retryCount = 0;
+    const maxRetries = 5;
+    
+    const attemptReconnect = () => {
+        retryCount++;
+        console.log(`Attempting to reconnect (${retryCount}/${maxRetries})...`);
+        
         client.initialize().catch(err => {
             console.error('Reconnection failed:', err.message);
+            
+            if (retryCount < maxRetries) {
+                const delay = Math.min(retryCount * 10000, 60000); // Max 1 minute
+                console.log(`Retrying in ${delay/1000} seconds...`);
+                setTimeout(attemptReconnect, delay);
+            } else {
+                console.error('❌ Max reconnection attempts reached. Manual restart required.');
+            }
         });
-    }, 5000);
+    };
+    
+    setTimeout(attemptReconnect, 5000);
 });
 
 // Initialize
 client.initialize();
+
+// Connection health monitoring - check every 30 seconds
+let lastHealthCheck = Date.now();
+setInterval(async () => {
+    try {
+        if (connected && client) {
+            const state = await client.getState();
+            console.log(`Health check: ${state}`);
+            lastHealthCheck = Date.now();
+            
+            // If state is not CONNECTED, try to reconnect
+            if (state !== 'CONNECTED') {
+                console.log('⚠️ Connection state not healthy, attempting reconnect...');
+                connected = false;
+                await client.initialize();
+            }
+        }
+    } catch (error) {
+        console.error('Health check failed:', error.message);
+        
+        // If health check fails for more than 2 minutes, reconnect
+        if (Date.now() - lastHealthCheck > 120000) {
+            console.log('⚠️ No successful health check in 2 minutes, forcing reconnect...');
+            connected = false;
+            try {
+                await client.destroy();
+                await client.initialize();
+            } catch (err) {
+                console.error('Force reconnect failed:', err.message);
+            }
+        }
+    }
+}, 30000); // Check every 30 seconds
+
+// Keep client alive - send ping every 5 minutes to prevent timeout
+setInterval(() => {
+    if (connected && client) {
+        console.log('Sending keepalive ping...');
+        client.getState().then(state => {
+            console.log(`Keepalive OK - State: ${state}`);
+        }).catch(err => {
+            console.error('Keepalive failed:', err.message);
+        });
+    }
+}, 300000); // Every 5 minutes
 
 // Routes
 
