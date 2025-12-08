@@ -1,0 +1,21 @@
+# Phusion Passenger configuration for cPanel
+PassengerEnabled on
+PassengerAppType node
+PassengerStartupFile server.js
+PassengerNodejs /usr/bin/node
+
+# Environment variables (if not set in Application Manager)
+SetEnv NODE_ENV production
+SetEnv API_KEY aFmMZeEzwdvtUbljVXNs3Co49TJBfL2OWPnYkGqR
+
+# CORS headers
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, POST, OPTIONS"
+    Header set Access-Control-Allow-Headers "Content-Type, x-api-key"
+</IfModule>
+
+# Handle OPTIONS requests
+RewriteEngine On
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^(.*)$ $1 [R=200,L]

@@ -5,4 +5,5 @@ logs/
 *.log
 .env
 .wwebjs_auth/
+whatsapp-session/
 .DS_Store

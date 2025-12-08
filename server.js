@@ -14,34 +14,70 @@ let connected = false;
 // Middleware
 app.use(express.json());
 
-// Initialize WhatsApp
-console.log('Starting WhatsApp...');
+// Initialize WhatsApp with persistent session
+console.log('Starting WhatsApp with persistent session...');
 
 client = new Client({
-    authStrategy: new LocalAuth(),
+    authStrategy: new LocalAuth({
+        dataPath: './whatsapp-session',
+        clientId: 'whatsapp-payment-bot'
+    }),
     puppeteer: {
         headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--single-process',
+            '--disable-gpu'
+        ]
     }
 });
 
 // QR Code event
 client.on('qr', async (qr) => {
-    console.log('QR Code received!');
+    console.log('QR Code received! Scan to authenticate.');
     qrCode = await qrcode.toDataURL(qr);
 });
 
 // Ready event
 client.on('ready', () => {
-    console.log('WhatsApp connected!');
+    console.log('✅ WhatsApp connected successfully!');
+    console.log('Session saved - will auto-reconnect on restart');
     connected = true;
     qrCode = null;
 });
 
-// Disconnected event
-client.on('disconnected', () => {
-    console.log('WhatsApp disconnected!');
+// Authenticated event (session loaded from disk)
+client.on('authenticated', () => {
+    console.log('✅ WhatsApp authenticated using saved session');
+});
+
+// Authentication failure
+client.on('auth_failure', (msg) => {
+    console.error('❌ Authentication failed:', msg);
+    console.log('Please scan QR code again');
     connected = false;
+    qrCode = null;
+});
+
+// Disconnected event with auto-reconnect
+client.on('disconnected', (reason) => {
+    console.log('⚠️ WhatsApp disconnected:', reason);
+    connected = false;
+    qrCode = null;
+    
+    // Auto-reconnect after 5 seconds
+    console.log('Attempting to reconnect in 5 seconds...');
+    setTimeout(() => {
+        console.log('Reinitializing WhatsApp client...');
+        client.initialize().catch(err => {
+            console.error('Reconnection failed:', err.message);
+        });
+    }, 5000);
 });
 
 // Initialize
